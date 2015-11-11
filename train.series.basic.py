@@ -45,8 +45,8 @@ trainfiltered = filterFeatures(train)
 testfiltered = filterFeatures(test)
 
 #%%
-trainfiltered = train
-testfiltered = test
+#trainfiltered = train
+#testfiltered = test
 #%%
 trainfiltered.drop(['Customers'], axis=1, inplace=True)
 testfiltered.drop(['Customers'], axis=1, inplace=True)
@@ -74,7 +74,7 @@ assert (train1.shape[1]==len(labels))
 #np.random.shuffle(train1)
 #%%
 np.random.seed(1305)
-msk = np.random.rand(train1.shape[0]) < 0.95
+msk = np.random.rand(train1.shape[0]) < 0.7
 print('Creating DMatrices...')
 #%%
 dtrain1 = xgb.DMatrix(train1[msk], label = trainSales[msk], missing=NAN, feature_names=labels)
@@ -88,13 +88,13 @@ dtest1 = xgb.DMatrix(train1[~msk], label = trainSales[~msk], missing=NAN, featur
 #dtest2 = xgb.DMatrix(train2[~msk], label = trainCustomers[~msk], missing=NAN)
 print('Training...')
 #%%
-param1 = {'booster':'gbtree','max_depth':10, 'eta':0.08, 'silent':1, 'objective':'reg:linear', 'eval_metric':'rmse',
+param1 = {'booster':'gbtree','max_depth':15, 'eta':0.03, 'silent':1, 'objective':'reg:linear', 'eval_metric':'rmse',
 'gamma':0, 'lambda':0, 'alpha':0, 'lambda_bias': 0 }
 watchlist1  = [(dtrain1,'train'), (dtest1,'test')]
 
 print(time.ctime())
 start = time.time()
-num_round1 = 50
+num_round1 = 300
 
 bstSales = xgb.train(param1, dtrain1, num_round1, watchlist1, feval=rmspe_metric, early_stopping_rounds=40)
 
@@ -123,3 +123,11 @@ bstSales.dump_model('dump.raw.txt')
 #end = time.time()
 #
 #printTime(end - start)
+#%%
+
+p = bstSales.predict(dtest1).astype(np.int)
+
+print getScore(bstSales, dtest1)
+plotDifference(bstSales, dtest1)
+#%%%
+runfile('/home/farog/rossman/submit.series.basic.py', wdir=r'/home/farog/rossman')

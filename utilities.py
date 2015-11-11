@@ -48,9 +48,8 @@ def plotFeatureImportance(bst):
     xgb.plot_importance(bst, height=0.2)
     plt.gcf().savefig('feature_importance_xgb.png', dpi=200)
     #%%
-    
-def plotDifference(bst, dtest, target = None):
     #%%
+def plotDifference(bst, dtest, target = None):
     p = bst.predict(dtest)
     l = 0
     if (target is None):    
@@ -60,7 +59,13 @@ def plotDifference(bst, dtest, target = None):
     res = np.abs((l-p)/l)
     res = res[~np.isnan(res)]
     res = res[~np.isinf(res)]
-    plt.hist(res, range=(0,1), bins=50)
+    xmax = 0.2
+    for y in np.arange(0,xmax,xmax/8):    
+        plt.axvline(y, color='g', linestyle='dashed')
+    plt.hist(res, range=(0,xmax), bins=50, color='red')
+    plt.axvline(res.mean(), color='c', linestyle='dashed', linewidth=2)
+    for y in range(200,1600,200):    
+        plt.axhline(y, color='g', linestyle='dashed')
 #%%
     
 def getScore(bst, dtest, target = None):  

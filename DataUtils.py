@@ -360,7 +360,7 @@ def createSeries_SKIP(data, periodLength,skip):
     if (periodLength==1):
         return data.values.astype(np.float32)
     n = len(data)
-    m1 = data.shape[1] - 3#Date,Sales.Store corection
+    m1 = data.shape[1] - 2#Date,Sales corection
     m2 = periodLength
     m3 = skip
     series1 = np.zeros((n, m1), dtype=np.float32)
@@ -380,7 +380,9 @@ def createSeries_SKIP(data, periodLength,skip):
     for i in storeIds:
         storeRows = getStoreRows(data, i)
         storeSales = storeRows.Sales.values
-        storeRows.drop(['Date','Sales','Store'], axis=1, inplace=True)
+        storeRows.drop(['Date','Sales',
+#        'Store'
+        ], axis=1, inplace=True)
 #        storeCustomers = storeRows.Customers.values
         storeRows = storeRows.values
         for j in xrange(indexStart, len(storeRows)):
@@ -403,7 +405,9 @@ def createSeries_SKIP(data, periodLength,skip):
     #%% 
     series = np.concatenate((series1, series2, series3), axis=1)
     #%%
-    labels = np.array(data.columns.drop(['Date','Sales','Store']))
+    labels = np.array(data.columns.drop(['Date','Sales',
+#    'Store'
+    ]))
 #%%    
     dateLabs = ['Date'+str(i) for i in range(-1,-periodLength-1,-1)]            
     dateSkipLabs = ['DateSkip'+str(i) for i in range(7,(skip+1)*7,7)]
@@ -474,19 +478,18 @@ def getTestSeries_SKIP(data, future, periodLength, skip, labels):
     data.sort(['Store', 'Date'], inplace=True)
     future.sort(['Date','Store'], inplace=True)
     storeIds = np.unique(future.Store)
-#%%    
     minDate = min(future.Date)
     idx = np.where(future.Date == minDate)
     firstDay = future.iloc[idx]
 #    firstDay = firstDay.drop(['Sales','Date'], axis = 1)
-        
     firstDay.columns = [x.translate(None,'_') for x in firstDay.columns]
     lab = [x for x in firstDay.columns if labels.__contains__(x)]
-    lab.insert(0, 'Store')
+#    lab.insert(0, 'Store')
     firstDay = firstDay[lab]
-   #%%     
-    m = data.shape[1] + (periodLength) + skip - 3 #Date,Sales,Customers corection
-    
+
+#    print firstDay.shape
+    m = len(lab) + (periodLength) + skip #Date, Customers corection
+#    print m
     n = len(np.unique(data.Store))
     result = np.zeros((n, m))
     cnt = 0
@@ -494,21 +497,16 @@ def getTestSeries_SKIP(data, future, periodLength, skip, labels):
     result = np.zeros((len(storeIds), m))
     for storeId in storeIds:
         storeRows = getStoreRows(data, storeId)
-#        print('--',storeId)
         storeIdx = np.where(firstDay.Store == storeId)
-#        print('### ',storeIdx)
-#        print firstDay.columns
-        features = firstDay.iloc[storeIdx].drop('Store', axis=1).values.squeeze()
+        features = firstDay.iloc[storeIdx].values.squeeze()
         prevSales = storeRows.Sales[-periodLength:]
         prevSkipSales = storeRows.Sales[-7:-7*(skip+1):-7]
-#        prevCustomers = storeRows.Customers[-periodLength:]
         item = np.hstack((features, prevSkipSales, prevSales))
-#        print prevSales.shape, features.shape
         result[cnt] = item
         cnt = cnt + 1
         if (cnt%100==0):        
             print(cnt)
-    return result
+    return result, lab
 
 def getEarliestDate(data, periodLength):
     #%%
@@ -571,13 +569,19 @@ def predictStep_SKIP(series, future, date, predictSalesFunc, periodLength, skip,
     currDay = future.iloc[idx]
     currDay.sort(['Store'], inplace = True)
     currDay.drop(['Date', 'Sales','Store'], axis=1, inplace=True)
-    assert series.shape[1] == currDay.shape[1] + periodLength + skip    
+    try:    
+        assert series.shape[1] == currDay.shape[1] + periodLength + skip    
+    except:
+        print series.shape[1],'!=',currDay.shape[1], ' + ', periodLength, ' + ', skip
+        
     series[:,:-periodLength-skip] = currDay.values
     
     #prediction
     sales = predictSalesFunc(xgb.DMatrix(series, missing=np.nan, feature_names = labels))
  
-    sales[~currDay.Open] = 0
+    if sum(~currDay.Open) > 0:
+        print 'SOME CLOSED SHOPS'
+        sales[~currDay.Open.values] = 0
     
     dateIdx = salesRecord.Date == date
     assert sum(dateIdx) == len(sales)    
@@ -618,13 +622,14 @@ def createSalesRecord(train, test):
     
 def filterFeatures(data):
     labs = []
-    labs.extend( getColumnsStartingWith(data.columns, 'Assortment') )
-    labs.extend( getColumnsStartingWith(data.columns, 'Holiday') )
+#    labs.extend( getColumnsStartingWith(data.columns, 'Assortment') )
+#    labs.extend( getColumnsStartingWith(data.columns, 'Holiday') )
 #    labs.extend( getColumnsStartingWith(data.columns, 'Month') )
 #    labs.extend( getColumnsStartingWith(data.columns, 'PromoMonth') )
+    labs.extend( getColumnsStartingWith(data.columns, 'Competition') )
     labs.extend( getColumnsWith(data.columns, 'Mean') )
-    labs.extend(['Sales','Customers','Store','Date'])
-    labs.extend(['DayOfWeek', 'week', 'Promo', 'Open', 'CompetitionDistance'])
+    labs.extend(['Sales','Customers','Store','Date','Open'])
+    labs.extend(['DayOfWeek', 'week', 'Month', 'Promo', 'Assortment_a'])
     return reorderColumns(data[labs], ['Sales','Customers','Store'])    
     
 #%%

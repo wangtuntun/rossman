@@ -8,7 +8,7 @@ import progressbar as pb
 #%%
 period = 7
 skipPeriod = 5
-series = getTestSeries_SKIP(train, test, period, skipPeriod, labels)
+series, newLabels = getTestSeries_SKIP(train, test, period, skipPeriod, labels)
 
 
 #%%
@@ -29,6 +29,7 @@ salesRecord = createSalesRecord(train, test)
 bar = pb.ProgressBar().start()
 n = len(dates)
 cnt = 0.0
+#%%    
 for date in dates:
     series, sales, salesRecord = predictStep_SKIP(series, 
                                 testfiltered, 
