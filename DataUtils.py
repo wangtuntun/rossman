@@ -192,42 +192,57 @@ def addMeanSalesForWeekDayOfMonth(data):
     return data.groupby(['Store','Month', 'DayOfWeek']).apply(addMeanSales_WeekDayOfMonth)
     
 def addMeanSales_WeekDayOfMonth(data):
-    data['WeekDayOfMonthMeanSales'] = data['Sales'].mean()
+    x = data['Sales']
+    x = x[x!=0]
+    data['WeekDayOfMonthMeanSales'] = x.mean()
+    data['WeekDayOfMonthMedianSales'] = x.median()
     return data
 
 def addMeanSalesForMonth(data):
     return data.groupby(['Store','Month']).apply(addMeanSales_Month)
     
 def addMeanSales_Month(data):
-    data['MonthMeanSales'] = data['Sales'].mean()
+    x = data['Sales']
+    x = x[x!=0]
+    data['MonthMeanSales'] = x.mean()
+    data['MonthMedianSales'] = x.median()
     return data
 
 def addMeanSalesForWeekDay(data):
     return data.groupby(['Store','DayOfWeek']).apply(addMeanSales)
 
 def addMeanSales(data):
-    data['DayMeanSales'] = data['Sales'].mean()
+    x = data['Sales']
+    x = x[x!=0]
+    data['DayMeanSales'] = x.mean()
+    data['DayMedianSales'] = x.median()
     return data
 
 def addMeanCustomersForWeekDay(data):
     return data.groupby(['Store','DayOfWeek']).apply(addMeanCustomers)
 
 def addMeanCustomers(data):
-    data['DayMeanCustomers'] = data['Customers'].mean()
+    x = data['Customers']
+    x = x[x!=0]
+    data['DayMeanCustomers'] = x.mean()
     return data
 
 def addMeanCustomersForMonth(data):
     return data.groupby(['Store','Month']).apply(addMeanCustomers_Month)
 
 def addMeanCustomers_Month(data):
-    data['MonthMeanCustomers'] = data['Customers'].mean()
+    x = data['Customers']
+    x = x[x!=0]
+    data['MonthMeanCustomers'] = x.mean()
     return data
 
 def addMeanCustomersForWeekDayOfMonth(data):
     return data.groupby(['Store','Month','DayOfWeek']).apply(addMeanCustomers_WeekDayOfMonth)
 
 def addMeanCustomers_WeekDayOfMonth(data):
-    data['WeekDayOfMonthMeanCustomers'] = data['Customers'].mean()
+    x = data['Customers']
+    x = x[x!=0]
+    data['WeekDayOfMonthMeanCustomers'] = x.mean()
     return data
     
 def getMeansFromTrain(train):
@@ -547,10 +562,10 @@ def predictStep(series, future, date, predictSalesFunc, periodLength, labels):
 
  
 def predictStep_SKIP(series, future, date, predictSalesFunc, periodLength, skip, salesRecord, labels):
-#%%    
+    #%%    
     tdelta = datetime.timedelta(days=7)
-   #%% 
-    
+    #%% 
+    assert len(labels) == series.shape[1]
     
     idx = np.where(future.Date == date)
     currDay = future.iloc[idx]
@@ -561,6 +576,8 @@ def predictStep_SKIP(series, future, date, predictSalesFunc, periodLength, skip,
     
     #prediction
     sales = predictSalesFunc(xgb.DMatrix(series, missing=np.nan, feature_names = labels))
+ 
+    sales[~currDay.Open] = 0
     
     dateIdx = salesRecord.Date == date
     assert sum(dateIdx) == len(sales)    

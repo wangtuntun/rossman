@@ -1,4 +1,5 @@
 from DataUtils import *
+import progressbar as pb
 #%%
 #test.drop('Store', axis=1, inplace=True)
 #test.drop('Date', axis=1, inplace=True)
@@ -25,6 +26,9 @@ totalSales = np.array([])
 labels = dtest1.feature_names
 salesRecord = createSalesRecord(train, test)
 #%%
+bar = pb.ProgressBar().start()
+n = len(dates)
+cnt = 0.0
 for date in dates:
     series, sales, salesRecord = predictStep_SKIP(series, 
                                 testfiltered, 
@@ -35,6 +39,8 @@ for date in dates:
                                 salesRecord, 
                                 labels)
     totalSales = np.append(totalSales, sales)
+    cnt = cnt + 1
+    bar.update(cnt*100/n)
     print date       
 #%%
 submitID = np.load('submitID.npy')
